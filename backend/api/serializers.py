@@ -112,7 +112,7 @@ class SubscriptionSerializer(UserSerializer):
         """Аватвр автора"""
         if not obj.author.avatar:
             return ''
-        return obj.author.avatar
+        return str(obj.author.avatar)
 
 
 class TagSerializer(serializers.ModelSerializer):
