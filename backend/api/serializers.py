@@ -111,7 +111,7 @@ class SubscriptionSerializer(UserSerializer):
     def get_avatar(self, obj):
         """Аватвр автора"""
         if not obj.author.avatar:
-            return None
+            return ''
         return obj.author.avatar
 
 
