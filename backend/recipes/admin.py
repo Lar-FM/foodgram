@@ -14,16 +14,16 @@ class RecipeTagsInLine(admin.TabularInline):
 
 
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "text", "pub_date", "author")
-    search_fields = ("name", "author")
+    list_display = ('id', 'name', 'text', 'pub_date', 'author')
+    search_fields = ('name', 'author')
     inlines = (RecipeIngredientsInLine, RecipeTagsInLine)
-    empty_value_display = "-пусто-"
+    empty_value_display = '-пусто-'
 
 
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "measurement_unit")
-    search_fields = ("name",)
-    empty_value_display = "-пусто-"
+    list_display = ('id', 'name', 'measurement_unit')
+    search_fields = ('name',)
+    empty_value_display = '-пусто-'
 
 
 class TagAdmin(admin.ModelAdmin):
