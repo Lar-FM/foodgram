@@ -78,8 +78,9 @@ class SubscriptionSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField(source='author.recipes.count')
     is_subscribed = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
-    # avatar = serializers.ReadOnlyField(source='author.avatar', default=None)
+    avatar = Base64ImageField(
+        required=False, allow_null=True, source='author.avatar'
+    )
 
     class Meta:
         model = Follow
@@ -109,10 +110,6 @@ class SubscriptionSerializer(UserSerializer):
         """Количество рецептов автора."""
         return Recipe.objects.filter(author=obj.id).count()
 
-    def get_avatar(self, obj):
-        """Аватар автора"""
-        return obj.author.avatar if obj.author.avatar else ''
-
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
@@ -132,7 +129,6 @@ class RecipeIngredientsSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
     )
-    # amount = serializers.ReadOnlyField(source='ingredient.name')
 
     class Meta:
         model = RecipeIngredients
@@ -158,18 +154,11 @@ class RecipeSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     tags = TagSerializer(many=True)
     image = Base64ImageField()
-    ingredients = serializers.SerializerMethodField()
-    # ingredients = RecipeIngredientsSerializer(
-    #     many=True, source='get_ingredients'
-    # )
+    ingredients = RecipeIngredientsSerializer(
+        source='recipe_ingredients', many=True
+    )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-
-    def get_ingredients(self, obj):
-        ingredients = RecipeIngredients.objects.filter(recipe=obj)
-        serializer = RecipeIngredientsSerializer(ingredients, many=True)
-
-        return serializer.data
 
     def get_is_favorited(self, obj):
 
@@ -245,53 +234,48 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
         return value
 
-    def create(self, validated_data):
-        author = self.context.get('request').user
-        tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
+    def create_tags(self, data, tags):
+        return data.tags.set(tags)
 
-        recipe = Recipe.objects.create(author=author, **validated_data)
-        recipe.tags.set(tags)
-
+    def create_ingredients(self, data, ingredients):
         for ingredient in ingredients:
             amount = ingredient.get('amount')
             ingredient = get_object_or_404(
                 Ingredient, pk=ingredient.get('id').id
             )
 
-            RecipeIngredients.objects.create(
-                recipe=recipe, ingredient=ingredient, amount=amount
+            RecipeIngredients.objects.update_or_create(
+                recipe=data,
+                ingredient=ingredient,
+                defaults={'amount': amount},
             )
+
+    def create(self, validated_data):
+        author = self.context.get('request').user
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+
+        recipe = Recipe.objects.create(author=author, **validated_data)
+        self.create_tags(data=recipe, tags=tags)
+        self.create_ingredients(data=recipe, ingredients=ingredients)
+
         return recipe
 
     def update(self, instance, validated_data):
         tags = validated_data.pop('tags', None)
-        if tags is not None:
-            instance.tags.set(tags)
-        else:
+        if not tags:
             raise exceptions.ValidationError(
                 'Добавьте хотя бы один тег!'
             )
+        self.create_tags(data=instance, tags=tags)
 
         ingredients = validated_data.pop('ingredients', None)
-        if ingredients is not None:
-            instance.ingredients.clear()
-
-            for ingredient in ingredients:
-                amount = ingredient.get('amount')
-                ingredient = get_object_or_404(
-                    Ingredient, pk=ingredient.get('id').id
-                )
-
-                RecipeIngredients.objects.update_or_create(
-                    recipe=instance,
-                    ingredient=ingredient,
-                    defaults={'amount': amount},
-                )
-        else:
+        if not ingredients:
             raise exceptions.ValidationError(
                 'Добавьте хотя бы один ингредиент!'
             )
+        instance.ingredients.clear()
+        self.create_ingredients(data=instance, ingredients=ingredients)
 
         return super().update(instance, validated_data)
 

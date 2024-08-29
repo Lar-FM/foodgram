@@ -100,10 +100,12 @@ class Recipe(models.Model):
 
 class RecipeIngredients(models.Model):
     recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, verbose_name='Рецепт'
+        Recipe, on_delete=models.CASCADE, verbose_name='Рецепт',
+        related_name='recipe_ingredients'
     )
     ingredient = models.ForeignKey(
-        Ingredient, on_delete=models.PROTECT, verbose_name='Ингредиент'
+        Ingredient, on_delete=models.PROTECT, verbose_name='Ингредиент',
+        related_name='recipe_ingredients'
     )
     amount = models.PositiveSmallIntegerField(
         validators=(MinValueValidator(1, 'Не может быть менее 1'),),
