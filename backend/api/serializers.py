@@ -79,6 +79,7 @@ class SubscriptionSerializer(UserSerializer):
     recipes_count = serializers.ReadOnlyField(source='author.recipes.count')
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
+    # avatar = serializers.ReadOnlyField(source='author.avatar', default=None)
 
     class Meta:
         model = Follow
@@ -131,6 +132,7 @@ class RecipeIngredientsSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
     )
+    # amount = serializers.ReadOnlyField(source='ingredient.name')
 
     class Meta:
         model = RecipeIngredients
@@ -157,6 +159,9 @@ class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     image = Base64ImageField()
     ingredients = serializers.SerializerMethodField()
+    # ingredients = RecipeIngredientsSerializer(
+    #     many=True, source='get_ingredients'
+    # )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
