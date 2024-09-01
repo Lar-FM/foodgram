@@ -169,26 +169,26 @@ class RecipeViewSet(viewsets.ModelViewSet):
         context.update({'request': self.request})
         return context
 
-    def add(self, model, user, pk, name):
+    def add(self, model, user, pk):
         """Добавление рецепта"""
         recipe = get_object_or_404(Recipe, pk=pk)
         relation = model.objects.filter(user=user, recipe=recipe)
         if relation.exists():
             return Response(
-                {'errors': f'Нельзя повторно добавить рецепт в {name}'},
+                {'errors': 'Нельзя повторно добавить рецепт'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         model.objects.create(user=user, recipe=recipe)
         serializer = ShortRecipeSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def delete_relation(self, model, user, pk, name):
+    def delete_relation(self, model, user, pk):
         """Удаление рецепта из списка пользователя."""
         recipe = get_object_or_404(Recipe, pk=pk)
         relation = model.objects.filter(user=user, recipe=recipe)
         if not relation.exists():
             return Response(
-                {'errors': f'Нельзя повторно удалить рецепт из {name}'},
+                {'errors': 'Нельзя повторно удалить рецепт'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         relation.delete()
@@ -204,10 +204,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Добавление и удаление рецептов из избранного."""
         user = request.user
         if request.method == 'POST':
-            name = 'избранное'
-            return self.add(Favorite, user, pk, name)
-        name = 'избранного'
-        return self.delete_relation(Favorite, user, pk, name)
+            return self.add(Favorite, user, pk)
+        return self.delete_relation(Favorite, user, pk)
 
     @action(
         detail=True,
@@ -219,10 +217,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Добавление и удаление рецептов из списока покупок."""
         user = request.user
         if request.method == 'POST':
-            name = 'список покупок'
-            return self.add(ShoppingCart, user, pk, name)
-        name = 'списка покупок'
-        return self.delete_relation(ShoppingCart, user, pk, name)
+            return self.add(ShoppingCart, user, pk)
+        return self.delete_relation(ShoppingCart, user, pk)
 
     @action(
         detail=False,
@@ -262,12 +258,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 def redirect_view(request, pk=None):
-    host_url = str(request.scheme) + '://' + str(request.get_host())
+    host_url = f'{str(request.scheme)}://{str(request.get_host())}'
     if pk:
         my_short_url = (
-            host_url + '/s/' + str(short_url.encode_url(pk))
+            f'{host_url}/s/{short_url.encode_url(pk)}'
         )
-        print(my_short_url)
         return Response(
             {'short-link': my_short_url},
             status=status.HTTP_200_OK
